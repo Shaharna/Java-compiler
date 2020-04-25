@@ -1,0 +1,219 @@
+dori203
+shaharna13
+
+=============================
+=      File description     =
+=============================
+
+Sjavac.java -
+main/ - Sjavac.java: main class for the program.
+
+Regex/ -
+RegexException.java
+    Patterns/BooleanPattern.java: Pattern class for Boolean Structure
+    Patterns/DoublePattern.java: Pattern class for Double Structure
+    Patterns/IntPattern.java: Pattern class for int Structure
+    Patterns/CharPattern.java: Pattern class for Char Structure
+    Patterns/FinalPattern.java: Pattern class for Final Structure
+    Patterns/OpenBlockPattern.java: Pattern class for Block Structure
+    Patterns/DeclarationPatterns.java: Interface class for all declaration patterns.
+    Patterns/GeneralPattern.java: Pattern class for General sjava line Structure
+    Patterns/StringPattern.java: Pattern class for String Structure
+
+Scopes/ -
+    Scopes/Scope.java: Abstract Class for Scope, which describes a scope in the sjava file.
+    Scopes/OuterScope.java: Class for outer Scope parser, which is responsible for the outer scope
+    Scopes/MethodScope.java: Class for Method Scope, which is responsible for method scope
+    Scopes/BlockScope.java: Class for Block Scope , which is responsible for the if and while blocks
+    Scopes/LogicException.java: This class represents an Exceptions that are raised when a logic error occurred
+    Scopes/ExceptionIncompatibleType.java: This class represents an Exceptions that are raised when two variables with
+                                            different type are declared
+    Scopes/ExceptionInvalidParameters.java: This class represents an Exceptions that are raised when there is invalid
+                                            number of parameters in a function call.
+    Scopes/ExceptionMethodDoesNotExist.java: This class represents an Exceptions that are raised when a function that
+                                            does not exist in the code  is called.
+    Scopes/ExceptionVariableDeclarationAndAssignment.java: This class represents an Exceptions that are raised when an
+                                                            error occured while declaring or assingning params, there
+                                                            are additional informative messages for each case.
+                                                            in the same scope.
+    Parsers/
+        Scopes/Parsers/FileParser.java: Class for most external parser, that parses through the original file lines,
+                                        and creates scope and methods object from the given data.
+        Scopes/Parsers/ScopeParser.java: Class for Scope parser, which parser through lines already set in the given
+                                        scopes data.
+        LineMannagers/
+            Scopes/Parsers/LineMannagers/BlockManager.java: a class handel block beginning in the sjava file
+            Scopes/Parsers/LineMannagers/DeclareAndAssign.java: a class handel declaration and assignment of variables
+            Scopes/Parsers/LineMannagers/LineParser.java: a class parsering each and every line of the code and sending
+                                                          it to the right process to be handled
+Line.java: Line Wrapper, includes the line number and its content
+Variable.java: Class for variable objects.
+
+=============================
+=          Design           =
+=============================
+
+To begin with, we should mention that our line of thinking was to treat each type as a pattern, as this is
+the way it is represented in the sjava file. Therefore we've created for each type its own  pattern, and used
+its properties all over the code instead of using raw strings (for example, we used intPattern.getMyTypeName
+instead of using "int" ) Moreover we compressed all the type property exists in the code
+ into an array, and when combining this two utilities, we made the code very modular as in order to add
+ a new type to the sjava compiler options, all you have to do is create one that implements the
+ DeclarationPattern interface, and add it to the array.
+ From there, the code will adjust all the regex to support this new type pattern.
+
+
+We chose to create a modular design, by creating independent elements of the program to work as separate
+classes, that integrate using a single master-class(Sjavac).
+We divided our program into the following components:
+- Scope object.
+- Parsers.
+- Regex Patterns.
+
+Scopes:
+Each Scope object (OuterScope / MethodScope/ BlockScope) inherits from the abstract class Scope. The Scope object
+represents a scope in the code, and holds it's parent scope, it's variables, it's own parser (as a composition)
+and the shared methods each scope needs.
+These shared characteristics allowed us to create a single abstract class for a Scope object, that handles all the
+common methods and variables a Scope needs - declaring and assigning variable, calling methods, and holding another
+chained if/while block. It's importent to mention that the scopes vary in some characteristics, therefore each Scope
+class has it's own unique methods as well.
+
+Parsers:
+We created 3 different parsers, each of them handles a different parsing element:
+
+FileParser - the most external parser, that parses the given text file into an OuterScope and Methods. The parser is
+responsible of extracting data from the code, and assiging each line of text into it's approved scope. It is the only
+class to throw IOExceptions, since it is the only one handling the actual tet file. There will be only a single instance
+of this parser.
+
+ScopeParser - A parser that is held in a composition for each scope. It is responsible of handling each line of text
+that belongs to the current scope, and extracting  if/while blocks in the current scope.
+
+LineParser + it's sub-classes - The most importent parser in the program. This parser is a singleton, that is called
+many times during the run of the program, and it handles the actual content of each line of text. This parser first
+checks whether a line is legal (by matching it against the "General Pattern" - to be later explained in more detail).
+If the line of text is legal, line parser will identify the exact content of the line, and call the rightful command
+in accordance, from the current Scope object being processed. That mudilarity allows LineParer to handle most of the
+Regex matching done in the program, while the Scopes object handle the logical commands of assigning, declaring,
+calling methods.
+
+Regex Patterns:
+We creates an Interface named DeclarationPatterns, that each one of our "regex pattern classes" implements.
+Our "regex pattern classes" each represent a group of regex patterns, related by context. For example, all patterns
+relating to String values (the word "String", the pattern for identifying a valid String text, etc.) will be held in
+the Singleton instance of "StringPattern". This design allows us to repeat using compositions of regex expressions
+in many places in our program, while writing them solely in the Regex Patters classes. The solution is also modular,
+since if we wish to create another primitive type - we can simply create another Pattern object with it's matching
+regex expressions. A very important class is the GeneralPattern. It composes combined regex expressions using the given
+regex pattern classes, into single expressions, for single purposes. For example, the regex pattern for determining
+whether a line of text is valis, is built from a composition of all possible patterns, given from each pattern class.
+
+2 of our most commonly used Regex Patterns:
+
+"(?<block>\\s*(if|while)\\s*(\\((\\s*.*\\s*)*\\))\\s*\\{\\s*)" - A regex expression for identifying at once all
+possible line of text that open a new if/while block. Since we composed it in another bigger pattern, we've used named
+groups, for identifying its content.
+
+"\\s*([a-zA-Z][\\w]*|[_]+[\\w]*)\\s*"; - A regex expression for identifying names - any legal string reffering to a
+variable name. This was used quite a few times during our program, to identify names of variable being declared or
+assigned.
+
+
+=============================
+=  Implementation details   =
+=============================
+
+Our exception logic - Error handling:
+We used the exceptions mechanism as a tool for identifying the source of an error, and it's location in text.
+Aside to IOExceptions, that may occour only in FileParser, during the first parsing proccess, we created 2 types of
+exceptions:
+
+Regex Exception -
+Thrown due to text not matching a regex pattern. These exceptions will be raised (with an informative message) in case
+a line of text is not valid, whether it includes illegal characters, or that it simply doesn't match any approved
+pattern of a valid command. Most exceptions are of this type.
+
+Logic Exception -
+Thrown due to a command that is not logically approves, meaning the command matched a specific regex, and is legal
+as a single command, but it is not a legal action in the current scopes allowed commands. There are a few different
+exception classes that inherit this class, all detail a different type of exception. For example -
+InvalidParameters - will be thrown in case a method was called with invalid parameter (not matching the amount or type
+of parameters).
+
+For improving our Exceptions mechanism, we creates another class named "Line", that is a wrapper for simple String
+lines of text. Each line of text is parsed with it's line index, and in case an exception is thrown, an error message
+will indicate both the type of violation and it's location in the original text file (line index).
+
+
+=============================
+=    Answers to questions   =
+=============================
+
+A few topics still worth addressing:
+1. Alternatives:
+    During our deign process we've thought of the following design alternatives:
+
+    1. Regex alternative - instead of composing existing regex patterns together with one another, we thought we could
+    alternatively process a line of text in a few steps following one another - for example word by word.
+    That logic would allow us to build smaller modular patterns, but in return would have required us to use quite a few
+    matchers and patterns for each line of text.
+
+    2. Another Regex alternatives - name grouping. We thought of a more "radical" way to match patterns - using a
+    single pattern, that is generated automatically by composing a few smaller pattern, that will be separated into
+    specific groups with a different meaning. That way, it is possible to create only 1 single pattern and matcher for
+    each line (the pattern will be quite long), and then, using Regex named groups, extract all values from the matcher,
+    in a very clean and precise way. This alternative is great since it allows us to modify each regex expression only
+    once, and if done precisely - can be modified very easily. We found that the named groups in regex are not all that
+    easy to write and manage, so we didn't fully implement that logic.
+
+    3. Scopes alternative - instead of creating a scope object for each Method/IfWhileBlock, we could have used a less
+    modular design that hold only a single scope, and saves it's current scope as a data member. This wouldn't have
+    been a clean or easy design, but it would have allowed us to use less instances of Scope objects, and simply count
+    pairs of parentheses to hold the current scope processed.
+
+2. Extendability - creating new types of variables:
+It is especially easy to create a new type of variable to our program. It will be done by creating a new RegexPattern
+object for the specific type (e.g - FloatPattern) that will hold all relevant regex patterns for the legal assignments
+and expressions of the float type. Afterwards, we will update "GeneralPattern" in accordance to make sure each line
+that includes the use of float will be identified - and that's it.
+
+3. Features we do not currently support, and what changes are required to support them:
+
+    a. Classes:
+    A class can be thought of another type of scope, holding it's methods, variables, constants, and parent scopes.
+    We can simply create another class that extends the abstract "Scope" class, and simply modify it to align with
+    the known properties of class (for example extending another class, will be done be duplicating characteristics,
+    and overriding in case needed)
+
+    b. Using Methods of standard Java (i.e System.out.println):
+    In our implementation, all methods are located as members in a linked list of the OuterScope. That same logic can
+    be used for standard Java methods - when imported, each method will me added as a MethodScope object to the linked
+    list of methods held in the most-external scope (in our case - outerScope).
+     That way they can still be reached from every Scope, and still require parameters.
+     The only difference is that they would not hold any lines of their own (since we don't need to check their
+     validity).
+
+as mentioned above the exception handling:
+
+
+Our exception logic - Error handling:
+We used the exceptions mechanism as a tool for identifying the source of an error, and it's location in text.
+Aside to IOExceptions, that may occour only in FileParser, during the first parsing proccess, we created 2 types of
+exceptions:
+
+Regex Exception -
+Thrown due to text not matching a regex pattern. These exceptions will be raised (with an informative message) in case
+a line of text is not valid, whether it includes illegal characters, or that it simply doesn't match any approved
+pattern of a valid command. Most exceptions are of this type.
+
+Logic Exception -
+Thrown due to a command that is not logically approves, meaning the command matched a specific regex, and is legal
+as a single command, but it is not a legal action in the current scopes allowed commands. There are a few different
+exception classes that inherit this class, all detail a different type of exception. For example -
+InvalidParameters - will be thrown in case a method was called with invalid parameter (not matching the amount or type
+of parameters).
+
+For improving our Exceptions mechanism, we creates another class named "Line", that is a wrapper for simple String
+lines of text. Each line of text is parsed with it's line index, and in case an exception is thrown, an error message
+will indicate both the type of violation and it's location in the original text file (line index).
